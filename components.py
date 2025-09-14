@@ -31,8 +31,7 @@ def display_select_mode():
         # 「label_visibility="collapsed"」とすることで、ラジオボタンを非表示にする
         st.session_state.mode = st.radio(
             label="",
-            options=[ct.ANSWER_MODE_1, ct.ANSWER_MODE_2],
-            label_visibility="collapsed"
+            options=[ct.ANSWER_MODE_1, ct.ANSWER_MODE_2]
         )
 
 

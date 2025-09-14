@@ -5,12 +5,19 @@
 ############################################################
 # 1. ライブラリの読み込み
 ############################################################
-# 「.env」ファイルから環境変数を読み込むための関数
-from dotenv import load_dotenv
-# ログ出力を行うためのモジュール
-import logging
+from pathlib import Path
+
 # streamlitアプリの表示を担当するモジュール
 import streamlit as st
+
+# 「.env」ファイルから環境変数を読み込むための関数
+from dotenv import load_dotenv
+ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=ENV_PATH)
+
+# ログ出力を行うためのモジュール
+import logging
+
 # （自作）画面表示以外の様々な関数が定義されているモジュール
 import utils
 # （自作）アプリ起動時に実行される初期化処理が記述された関数
@@ -26,7 +33,8 @@ import constants as ct
 ############################################################
 # ブラウザタブの表示文言を設定
 st.set_page_config(
-    page_title=ct.APP_NAME
+    page_title=ct.APP_NAME,
+    layout="wide"
 )
 
 # ログ出力を行うためのロガーの設定
@@ -46,6 +54,7 @@ except Exception as e:
     st.error(utils.build_error_message(ct.INITIALIZE_ERROR_MESSAGE), icon=ct.ERROR_ICON)
     # 後続の処理を中断
     st.stop()
+st.sidebar.write("retriever ready:", "retriever" in st.session_state)
 
 # アプリ起動時のログファイルへの出力
 if not "initialized" in st.session_state:
@@ -111,9 +120,17 @@ if chat_message:
         try:
             # 画面読み込み時に作成したRetrieverを使い、Chainを実行
             llm_response = utils.get_llm_response(chat_message)
+            if not isinstance(llm_response, dict):
+                st.exception(f"Invalid llm_response type: {type(llm_response)} -> {llm_response}")
+                st.stop()
+
+            for k in ("answer", "context"):
+                if k not in llm_response:
+                    st.exception(f"llm_response missing key: {k}. payload={llm_response}")
+                    st.stop()
         except Exception as e:
             # エラーログの出力
-            logger.error(f"{ct.GET_LLM_RESPONSE_ERROR_MESSAGE}\n{e}")
+            logger.exception(f"{ct.GET_LLM_RESPONSE_ERROR_MESSAGE}\n{e}")
             # エラーメッセージの画面表示
             st.error(utils.build_error_message(ct.GET_LLM_RESPONSE_ERROR_MESSAGE), icon=ct.ERROR_ICON)
             # 後続の処理を中断
@@ -142,7 +159,7 @@ if chat_message:
             logger.info({"message": content, "application_mode": st.session_state.mode})
         except Exception as e:
             # エラーログの出力
-            logger.error(f"{ct.DISP_ANSWER_ERROR_MESSAGE}\n{e}")
+            logger.exception(f"{ct.DISP_ANSWER_ERROR_MESSAGE}\n{e}")
             # エラーメッセージの画面表示
             st.error(utils.build_error_message(ct.DISP_ANSWER_ERROR_MESSAGE), icon=ct.ERROR_ICON)
             # 後続の処理を中断

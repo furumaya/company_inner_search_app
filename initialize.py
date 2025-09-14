@@ -5,6 +5,7 @@
 ############################################################
 # ライブラリの読み込み
 ############################################################
+import time
 import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -43,6 +44,7 @@ def initialize():
     # ログ出力の設定
     initialize_logger()
     # RAGのRetrieverを作成
+    os.makedirs(ct.CHROMA_DB_DIR, exist_ok=True)
     initialize_retriever()
 
 
@@ -123,8 +125,8 @@ def initialize_retriever():
     
     # チャンク分割用のオブジェクトを作成
     text_splitter = CharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=50,
+        chunk_size=900,
+        chunk_overlap=120,
         separator="\n"
     )
 
@@ -132,10 +134,17 @@ def initialize_retriever():
     splitted_docs = text_splitter.split_documents(docs_all)
 
     # ベクターストアの作成
-    db = Chroma.from_documents(splitted_docs, embedding=embeddings)
+    t0 = time.perf_counter()
+    if any(os.scandir(ct.CHROMA_DB_DIR)):
+        db = Chroma(persist_directory=ct.CHROMA_DB_DIR, embedding_function=embeddings)
+        logger.info(f"Chroma LOAD ok ({time.perf_counter()-t0:.2f}s) dir={ct.CHROMA_DB_DIR}")
+    else:
+        db = Chroma.from_documents(splitted_docs, embedding=embeddings, persist_directory=ct.CHROMA_DB_DIR)
+        logger.info(f"Chroma BUILD+PERSIST ({time.perf_counter()-t0:.2f}s) chunks={len(splitted_docs)}")
+        db.persist()
 
     # ベクターストアを検索するRetrieverの作成
-    st.session_state.retriever = db.as_retriever(search_kwargs={"k": 3})
+    st.session_state.retriever = db.as_retriever(search_kwargs={"k": 2})
 
 
 def initialize_session_state():

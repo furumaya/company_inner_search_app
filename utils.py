@@ -72,6 +72,10 @@ def get_llm_response(chat_message):
     # LLMのオブジェクトを用意
     llm = ChatOpenAI(model_name=ct.MODEL, temperature=ct.TEMPERATURE)
 
+    if "retriever" not in st.session_state:
+    # ここで落ちると UX 悪いので、わかりやすいエラーに
+        raise RuntimeError("Retriever is not initialized yet. Please reload the page.")
+
     # 会話履歴なしでもLLMに理解してもらえる、独立した入力テキストを取得するためのプロンプトテンプレートを作成
     question_generator_template = ct.SYSTEM_PROMPT_CREATE_INDEPENDENT_TEXT
     question_generator_prompt = ChatPromptTemplate.from_messages(
